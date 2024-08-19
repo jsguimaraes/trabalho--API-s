@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consumindo APIs e JSON com JavaScript</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        section {
+            margin-bottom: 20px;
+        }
+        .results {
+            margin-top: 10px;
+            padding: 10px;
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .error {
+            color: red;
+        }
+        input, button {
+            margin-top: 10px;
+            padding: 8px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Consumindo APIs e JSON com JavaScript</h1>
+    </header>
+
+    <!-- Seção 1: API Brasil -->
+    <section id="api-brasil">
+        <h2>Consulta à API Brasil</h2>
+        
+        <!-- Consulta Programática 1 -->
+        <div>
+            <h3>Consulta Programática 1 (Estados):</h3>
+            <button onclick="consultarApiBrasilEstados()">Consultar Estados</button>
+            <div id="consulta-programatica-1" class="results">Aguardando consulta...</div>
+        </div>
+
+        <!-- Consulta Programática 2 -->
+        <div>
+            <h3>Consulta Programática 2 (Municípios):</h3>
+            <button onclick="consultarApiBrasilMunicipios()">Consultar Municípios</button>
+            <div id="consulta-programatica-2" class="results">Aguardando consulta...</div>
+        </div>
+
+        <!-- Consulta via Formulário -->
+        <div>
+            <h3>Consulta via Formulário:</h3>
+            <label for="parametro1">Digite um parâmetro (por exemplo, "ibge/uf/v1" ou "ibge/municipios/v1"):</label>
+            <input type="text" id="parametro1" placeholder="Digite o parâmetro">
+            <button onclick="consultarParametro()">Consultar</button>
+            <div id="resultado-formulario" class="results">Aguardando consulta...</div>
+        </div>
+    </section>
+
+    <!-- Seção 2: API Externa -->
+    <section id="api-externa">
+        <h2>Consulta à API Externa</h2>
+        
+        <!-- Promise.race -->
+        <button onclick="consultarComPromiseRace()">Consultar com Promise.race</button>
+        <div id="resultado-promise-race" class="results">Aguardando consulta...</div>
+
+        <!-- Promise.all -->
+        <button onclick="consultarComPromiseAll()">Consultar com Promise.all</button>
+        <div id="resultado-promise-all" class="results">Aguardando consulta...</div>
+    </section>
+
+    <script>
+        // Função para buscar e exibir dados
+        const fetchData = async (url, elementId) => {
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error('Erro na resposta da API');
+                const data = await response.json();
+                displayData(data, elementId);
+            } catch (error) {
+                document.getElementById(elementId).innerHTML = `<p class="error">Erro: ${error.message}</p>`;
+            }
+        };
+
+        // Função para exibir os dados no HTML
+        const displayData = (data, elementId) => {
+            const container = document.getElementById(elementId);
+            container.innerHTML = '';
+            
+            if (Array.isArray(data)) {
+                const table = document.createElement('table');
+                const thead = document.createElement('thead');
+                const tbody = document.createElement('tbody');
+                
+                // Create table headers
+                const headers = Object.keys(data[0]);
+                const headerRow = document.createElement('tr');
+                headers.forEach(header => {
+                    const th = document.createElement('th');
+                    th.textContent = header;
+                    headerRow.appendChild(th);
+                });
+                thead.appendChild(headerRow);
+                
+                // Create table rows
+                data.forEach(item => {
+                    const row = document.createElement('tr');
+                    headers.forEach(header => {
+                        const td = document.createElement('td');
+                        td.textContent = item[header];
+                        row.appendChild(td);
+                    });
+                    tbody.appendChild(row);
+                });
+                
+                table.appendChild(thead);
+                table.appendChild(tbody);
+                container.appendChild(table);
+            } else {
+                container.textContent = JSON.stringify(data, null, 2);
+            }
+        };
+
+        // Consultas programáticas
+        const consultarApiBrasilEstados = () => {
+            fetchData('https://brasilapi.com.br/api/ibge/uf/v1', 'consulta-programatica-1');
+        };
+
+        const consultarApiBrasilMunicipios = () => {
+            fetchData('https://brasilapi.com.br/api/ibge/municipios/v1', 'consulta-programatica-2');
+        };
+
+        // Consulta baseada em formulário
+        const consultarParametro = async () => {
+            const parametro = document.getElementById('parametro1').value;
+            if (!parametro) {
+                document.getElementById('resultado-formulario').innerHTML = '<p class="error">Digite um parâmetro válido.</p>';
+                return;
+            }
+            const url = `https://brasilapi.com.br/api/v2/${parametro}`;
+            await fetchData(url, 'resultado-formulario');
+        };
+
+        // Consulta com Promise.race
+        const apiUrls = [
+            'https://jsonplaceholder.typicode.com/posts/1',
+            'https://jsonplaceholder.typicode.com/posts/2',
+            'https://jsonplaceholder.typicode.com/posts/3'
+        ];
+
+        const consultarComPromiseRace = async () => {
+            try {
+                const promises = apiUrls.map(url => fetch(url).then(response => response.json()));
+                const result = await Promise.race(promises);
+                displayData(result, 'resultado-promise-race');
+            } catch (error) {
+                document.getElementById('resultado-promise-race').innerHTML = `<p class="error">Erro: ${error.message}</p>`;
+            }
+        };
+
+        // Consulta com Promise.all
+        const consultarComPromiseAll = async () => {
+            try {
+                const promises = apiUrls.map(url => fetch(url).then(response => response.json()));
+                const results = await Promise.all(promises);
+                document.getElementById('resultado-promise-all').innerHTML = '';
+                results.forEach((result, index) => {
+                    const div = document.createElement('div');
+                    div.id = `resultado-promise-all-${index}`;
+                    document.getElementById('resultado-promise-all').appendChild(div);
+                    displayData(result, `resultado-promise-all-${index}`);
+                });
+            } catch (error) {
+                document.getElementById('resultado-promise-all').innerHTML = `<p class="error">Erro: ${error.message}</p>`;
+            }
+        };
+    </script>
+</body>
+</html>
